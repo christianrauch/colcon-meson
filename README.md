@@ -2,6 +2,11 @@
 
 A colcon extension for building [Meson](https://mesonbuild.com) packages.
 
+Install from the Python Package Index via:
+```sh
+pip install colcon-meson
+```
+
 ## Passing Meson arguments
 
 Arguments can be passed to `meson setup` via `--meson-args`:
