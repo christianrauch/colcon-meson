@@ -165,7 +165,9 @@ class MesonBuildTask(TaskExtensionPoint):
         if args.meson_args:
             cmd += args.meson_args
 
-        completed = await run(self.context, cmd, cwd=args.build_base, env=env)
+        completed = await run(self.context, cmd, cwd=args.build_base, env=env, capture_output="stdout")
+        if completed.returncode:
+            logger.error("\n"+completed.stdout.decode('utf-8'))
         return completed.returncode
 
     async def _build(self, args, env, *, additional_targets=None):
