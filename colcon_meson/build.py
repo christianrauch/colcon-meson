@@ -15,14 +15,6 @@ from colcon_core.task import TaskExtensionPoint
 logger = colcon_logger.getChild(__name__)
 
 
-def parse_install_targets(target_data):
-    install_targets = list()
-    for t in target_data:
-        if t["installed"]:
-            install_targets.append(t["name"])
-    return install_targets
-
-
 def cfg_changed(old, new):
     for p in old.keys() & new.keys():
         n = new[p]
@@ -113,22 +105,10 @@ class MesonBuildTask(TaskExtensionPoint):
         if rc:
             return rc
 
-        cmd = list()
-        cmd += [self.meson_path]
-        cmd += ["introspect"]
-        cmd += [args.build_base]
-        cmd += ["--targets"]
 
-        ret = await run(self.context, cmd, cwd=args.path, env=env, capture_output="stdout")
-
-        install_targets = parse_install_targets(json.loads(ret.stdout))
-
-        if install_targets:
-            completed = await self._install(args, env)
-            if completed.returncode:
-                return completed.returncode
-        else:
-            logger.error("no install targets")
+        completed = await self._install(args, env)
+        if completed.returncode:
+            return completed.returncode
 
         if not skip_hook_creation:
             create_environment_scripts(self.context.pkg, args, additional_hooks=additional_hooks)
@@ -201,6 +181,37 @@ class MesonBuildTask(TaskExtensionPoint):
 
     async def _install(self, args, env):
         self.progress('install')
+
+        mesontargetfile = Path(args.build_base) / "meson-info" / "intro-targets.json"
+        lastinstalltargetfile = Path(args.build_base) / "last_install_targets.json"
+
+        # get current install targets
+        assert(mesontargetfile.exists())
+        with open(mesontargetfile, 'r') as f:
+            install_targets = {target["name"]:target["install_filename"] for target in json.load(f) if target["installed"]}
+
+        if not install_targets:
+            logger.error("no install targets")
+
+        # remove files of removed install targets
+        if lastinstalltargetfile.exists():
+            with open(lastinstalltargetfile, 'r') as f:
+                old_targets = json.load(f)
+
+            removed_targets = set(old_targets.keys()) - set(install_targets.keys())
+
+            if removed_targets:
+                logger.info("removing '{}' targets: {}".format(self.context.pkg.name, removed_targets))
+
+            for tgt in removed_targets:
+                for path in old_targets[tgt]:
+                    if os.path.isfile(path):
+                        os.remove(path)
+                    elif os.path.isdir(path):
+                        shutil.rmtree(path)
+
+        with open(lastinstalltargetfile, 'w') as f:
+            json.dump(install_targets, f)
 
         cmd = list()
         cmd += [self.meson_path]
