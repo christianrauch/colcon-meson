@@ -220,3 +220,13 @@ class MesonBuildTask(TaskExtensionPoint):
         cmd += ["install"]
 
         return await run(self.context, cmd, cwd=args.build_base, env=env)
+
+
+class RosMesonBuildTask(TaskExtensionPoint):
+    def __init__(self):
+        super().__init__()
+
+    async def build(self):
+        meson_extension = MesonBuildTask()
+        meson_extension.set_context(context=self.context)
+        rc = await meson_extension.build()
