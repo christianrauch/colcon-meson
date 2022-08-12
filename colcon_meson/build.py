@@ -105,10 +105,9 @@ class MesonBuildTask(TaskExtensionPoint):
         if rc:
             return rc
 
-
-        completed = await self._install(args, env)
-        if completed.returncode:
-            return completed.returncode
+        rc = await self._install(args, env)
+        if rc:
+            return rc
 
         if not skip_hook_creation:
             create_environment_scripts(self.context.pkg, args, additional_hooks=additional_hooks)
@@ -219,7 +218,9 @@ class MesonBuildTask(TaskExtensionPoint):
         cmd += [self.meson_path]
         cmd += ["install"]
 
-        return await run(self.context, cmd, cwd=args.build_base, env=env)
+        completed = await run(self.context, cmd, cwd=args.build_base, env=env)
+        if completed.returncode:
+            return completed.returncode
 
 
 class RosMesonBuildTask(TaskExtensionPoint):
