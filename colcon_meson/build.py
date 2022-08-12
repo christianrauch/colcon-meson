@@ -231,3 +231,5 @@ class RosMesonBuildTask(TaskExtensionPoint):
         meson_extension = MesonBuildTask()
         meson_extension.set_context(context=self.context)
         rc = await meson_extension.build()
+        if rc:
+            return rc
