@@ -2,6 +2,8 @@ import os
 from pathlib import Path
 import shutil
 import json
+import copy
+import difflib
 
 from mesonbuild import coredata
 from mesonbuild.mesonmain import CommandLineParser
@@ -36,23 +38,24 @@ def cfg_diff(old, new):
     return d_added, d_removed
 
 
-def format_args(args):
-    return {arg.name: args.cmd_line_options[arg] for arg in args.cmd_line_options}
-
-
 class MesonBuildTask(TaskExtensionPoint):
+    subparsers = ["setup", "compile", "install"]
+
     def __init__(self):
         super().__init__()
 
         self.meson_path = shutil.which("meson")
-        self.parser_setup = CommandLineParser().subparsers.choices["setup"]
+
+        self.parsers = dict()
+        for subparser in self.subparsers:
+            self.parsers[subparser] = CommandLineParser().subparsers.choices[subparser]
 
     def add_arguments(self, *, parser):
         parser.add_argument('--meson-args',
             nargs='*', metavar='*', type=str.lstrip, default=list(),
             help='Pass arguments to Meson projects.')
 
-    def get_default_args(self, args):
+    def get_default_config_args(self, args):
         margs = list()
 
         # meson installs by default to architecture specific subdirectories,
@@ -72,21 +75,66 @@ class MesonBuildTask(TaskExtensionPoint):
         return margs
 
     def meson_parse_cmdline(self, cmdline):
-        args = self.parser_setup.parse_args(cmdline)
-        coredata.parse_cmd_line_options(args)
+        args = dict()
+        for module, parser in self.parsers.items():
+            # args[module] = parser.parse_known_args(cmdline)[0]
+            print(module, "start", cmdline)
+            args[module] = parser.parse_args(cmdline)
+            args[module], unknown = parser.parse_known_args(cmdline)
+            print(module, "start", unknown)
+            print(module, "args", args[module])
+            module_cmdline = copy.copy(cmdline)
+            print("matching...")
+            while len(unknown) > 0:
+                # print("matching...")
+                match = difflib.SequenceMatcher(a=module_cmdline, b=unknown).find_longest_match()
+                print("match", match)
+                del module_cmdline[match.a:match.a+match.size]
+                del unknown[match.b:match.b+match.size]
+                print("iter", cmdline)
+                print("iter", unknown)
+            # module_cmdline = cmdline - unknown
+            # module_cmdline = list()
+            # for p in cmdline:
+            #     if
+            # print("kwargs", args[module]._get_kwargs())
+            print(module ,"DONE")
         return args
 
-    def meson_format_cmdline(self, cmdline):
-        return format_args(self.meson_parse_cmdline(cmdline))
+        # # TODO: split "setup" and "compile"
+        # print(">>>> cmdline:", cmdline)
+        # args = self.parser_setup.parse_known_args(cmdline)[0]
+        # print(">>>> setup1 args:", args)
+        # args2 = self.parser_compile.parse_known_args(cmdline)[0]
+        # # print(">>>> compile1 args:", args2)
+        # coredata.parse_cmd_line_options(args)
+        # # print(">>>> setup2 args:", args)
+        # # coredata.parse_cmd_line_options(args2) # !!!
+        # return args
 
-    def meson_format_cmdline_file(self, builddir):
-        args = self.meson_parse_cmdline([])
-        coredata.read_cmd_line_file(builddir, args)
-        return format_args(args)
+    # def meson_format_cmdline(self, cmdline):
+    #     print("cmdline...")
+    #     return format_args(self.meson_parse_cmdline(cmdline))
+    #     # b = self.meson_parse_cmdline(cmdline)["setup"]
+    #     # print("b1", b)
+    #     # coredata.parse_cmd_line_options(b)
+    #     # print("b2", b)
+    #     # a = format_args(b)
+    #     # print("a", a)
+    #     # return a
+
+    # def meson_format_cmdline_file(self, builddir):
+    #     print("file...")
+    #     args = self.meson_parse_cmdline([])
+    #     coredata.read_cmd_line_file(builddir, args)
+    #     return format_args(args)
 
     async def build(self, *, additional_hooks=None, skip_hook_creation=False,
                     environment_callback=None, additional_targets=None):
         args = self.context.args
+
+        print("$$$$ context args:", args)
+        print("$$$$ MESON args:", args.meson_args)
 
         try:
             env = await get_command_environment('build', args.build_base, self.context.dependencies)
@@ -97,28 +145,54 @@ class MesonBuildTask(TaskExtensionPoint):
         if environment_callback is not None:
             environment_callback(env)
 
-        rc = await self._reconfigure(args, env)
+        # parse arguments and split per meson module
+        module_args = self.meson_parse_cmdline(args.meson_args)
+
+        rc = await self._reconfigure(args, module_args["setup"], env)
         if rc:
             return rc
 
-        rc = await self._build(args, env, additional_targets=additional_targets)
+        rc = await self._build(args, module_args["compile"], env, additional_targets=additional_targets)
         if rc:
             return rc
 
-        rc = await self._install(args, env)
+        rc = await self._install(args, module_args["install"], env)
         if rc:
             return rc
 
         if not skip_hook_creation:
             create_environment_scripts(self.context.pkg, args, additional_hooks=additional_hooks)
 
-    async def _reconfigure(self, args, env):
+    async def _reconfigure(self, args, module_args, env):
         self.progress('meson')
 
+        print("$$$$ _reconfigure args:", args)
+        print("$$$$ _reconfigure module args:", module_args)
+
+        def fmt_config_args(args):
+            coredata.parse_cmd_line_options(args)
+            return vars(args)
+
+        def fmt_config_cmdline(cmdline):
+            args = self.parsers["setup"].parse_args(cmdline)
+            coredata.parse_cmd_line_options(args)
+            return vars(args)
+
+        def fmt_cmdline_file(builddir):
+            args = self.parsers["setup"].parse_args([])
+            args = argparse.Namespace()
+            print("setup empty args", args)
+            coredata.parse_cmd_line_options(args)
+            coredata.read_cmd_line_file(builddir, args)
+            return vars(args)
+
         # set default arguments
-        marg_def = self.get_default_args(args)
+        cmdline_def = self.get_default_config_args(args)
+        # print("cmdline_def args:", cmdline_def)
         # parse default arguments as dict
-        defcfg = self.meson_format_cmdline(marg_def)
+        # defcfg = self.meson_format_cmdline(cmdline_def)
+        defcfg = fmt_config_cmdline(cmdline_def)
+        # print("defcfg args:", defcfg)
 
         buildfile = Path(args.build_base) / "build.ninja"
         configfile = Path(args.build_base) / "meson-info" / "intro-buildoptions.json"
@@ -128,8 +202,13 @@ class MesonBuildTask(TaskExtensionPoint):
         config_changed = False
 
         if not run_init_setup:
-            newcfg = self.meson_format_cmdline(args.meson_args)
-            oldcfg = self.meson_format_cmdline_file(args.build_base)
+            # newcfg = self.meson_format_cmdline(args.meson_args)
+            newcfg = fmt_config_args(module_args)
+            # coredata.parse_cmd_line_options(module_args)
+            # newcfg = vars(module_args)
+            # print("newcfg", newcfg)
+            # oldcfg = self.meson_format_cmdline_file(args.build_base)
+            oldcfg = fmt_cmdline_file(args.build_base)
             # remove default arguments
             for arg in oldcfg.keys() & defcfg.keys():
                 if oldcfg[arg] == defcfg[arg]:
@@ -150,6 +229,7 @@ class MesonBuildTask(TaskExtensionPoint):
 
             # check if command line arguments would change the current meson settings
             config_changed = cfg_changed(mesoncfg, newcfg)
+            print("changed?", config_changed)
 
         if not run_init_setup and not config_changed:
             return
@@ -157,10 +237,13 @@ class MesonBuildTask(TaskExtensionPoint):
         cmd = list()
         cmd += [self.meson_path]
         cmd += ["setup"]
-        cmd.extend(marg_def)
+        cmd.extend(cmdline_def)
         if config_changed:
             logger.info("reconfiguring '{}' because configuration changed".format(self.context.pkg.name))
             cmd += ["--reconfigure"]
+        print("module_args", module_args)
+        # if module_args:
+        #     print("module_args", module_args)
         if args.meson_args:
             cmd += args.meson_args
 
@@ -169,19 +252,25 @@ class MesonBuildTask(TaskExtensionPoint):
             logger.error("\n"+completed.stdout.decode('utf-8'))
         return completed.returncode
 
-    async def _build(self, args, env, *, additional_targets=None):
+    async def _build(self, args, module_args, env, *, additional_targets=None):
         self.progress('build')
+
+        print("$$$$ _build args:", args)
 
         cmd = list()
         cmd += [self.meson_path]
         cmd += ["compile"]
+        # if args.meson_args:
+        #     cmd += args.meson_args
 
         completed = await run(self.context, cmd, cwd=args.build_base, env=env)
         if completed.returncode:
             return completed.returncode
 
-    async def _install(self, args, env):
+    async def _install(self, args, module_args, env):
         self.progress('install')
+
+        print("$$$$ _install args:", args)
 
         mesontargetfile = Path(args.build_base) / "meson-info" / "intro-targets.json"
         lastinstalltargetfile = Path(args.build_base) / "last_install_targets.json"
@@ -217,6 +306,8 @@ class MesonBuildTask(TaskExtensionPoint):
         cmd = list()
         cmd += [self.meson_path]
         cmd += ["install"]
+        # if args.meson_args:
+        #     cmd += args.meson_args
 
         completed = await run(self.context, cmd, cwd=args.build_base, env=env)
         if completed.returncode:
