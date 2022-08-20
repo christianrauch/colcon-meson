@@ -172,6 +172,11 @@ class MesonBuildTask(TaskExtensionPoint):
         cmd += [self.meson_path]
         cmd += ["compile"]
 
+        # append content from the 'MAKEFLAGS' environment variable
+        makeflags = env.get("MAKEFLAGS")
+        if makeflags:
+            cmd.extend(makeflags.split())
+
         completed = await run(self.context, cmd, cwd=args.build_base, env=env, capture_output="stdout")
         if completed.returncode:
             logger.error("\n"+completed.stdout.decode('utf-8'))
