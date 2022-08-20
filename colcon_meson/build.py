@@ -172,9 +172,10 @@ class MesonBuildTask(TaskExtensionPoint):
         cmd += [self.meson_path]
         cmd += ["compile"]
 
-        completed = await run(self.context, cmd, cwd=args.build_base, env=env)
+        completed = await run(self.context, cmd, cwd=args.build_base, env=env, capture_output="stdout")
         if completed.returncode:
-            return completed.returncode
+            logger.error("\n"+completed.stdout.decode('utf-8'))
+        return completed.returncode
 
     async def _install(self, args, env):
         self.progress('install')
@@ -214,9 +215,10 @@ class MesonBuildTask(TaskExtensionPoint):
         cmd += [self.meson_path]
         cmd += ["install"]
 
-        completed = await run(self.context, cmd, cwd=args.build_base, env=env)
+        completed = await run(self.context, cmd, cwd=args.build_base, env=env, capture_output="stdout")
         if completed.returncode:
-            return completed.returncode
+            logger.error("\n"+completed.stdout.decode('utf-8'))
+        return completed.returncode
 
 
 class RosMesonBuildTask(TaskExtensionPoint):
