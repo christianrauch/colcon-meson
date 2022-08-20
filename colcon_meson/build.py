@@ -36,10 +36,6 @@ def cfg_diff(old, new):
     return d_added, d_removed
 
 
-def format_args(args):
-    return {arg.name: args.cmd_line_options[arg] for arg in args.cmd_line_options}
-
-
 class MesonBuildTask(TaskExtensionPoint):
     def __init__(self):
         super().__init__()
@@ -77,12 +73,12 @@ class MesonBuildTask(TaskExtensionPoint):
         return args
 
     def meson_format_cmdline(self, cmdline):
-        return format_args(self.meson_parse_cmdline(cmdline))
+        return vars(self.meson_parse_cmdline(cmdline))
 
     def meson_format_cmdline_file(self, builddir):
         args = self.meson_parse_cmdline([])
         coredata.read_cmd_line_file(builddir, args)
-        return format_args(args)
+        return vars(args)
 
     async def build(self, *, additional_hooks=None, skip_hook_creation=False,
                     environment_callback=None, additional_targets=None):
