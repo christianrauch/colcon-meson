@@ -36,10 +36,6 @@ def cfg_diff(old, new):
     return d_added, d_removed
 
 
-def format_args(args):
-    return {arg.name: args.cmd_line_options[arg] for arg in args.cmd_line_options}
-
-
 class MesonBuildTask(TaskExtensionPoint):
     def __init__(self):
         super().__init__()
@@ -50,7 +46,7 @@ class MesonBuildTask(TaskExtensionPoint):
     def add_arguments(self, *, parser):
         parser.add_argument('--meson-args',
             nargs='*', metavar='*', type=str.lstrip, default=list(),
-            help='Pass arguments to Meson projects.')
+            help="Pass 'setup' arguments to Meson projects.")
 
     def get_default_args(self, args):
         margs = list()
@@ -77,12 +73,12 @@ class MesonBuildTask(TaskExtensionPoint):
         return args
 
     def meson_format_cmdline(self, cmdline):
-        return format_args(self.meson_parse_cmdline(cmdline))
+        return vars(self.meson_parse_cmdline(cmdline))
 
     def meson_format_cmdline_file(self, builddir):
         args = self.meson_parse_cmdline([])
         coredata.read_cmd_line_file(builddir, args)
-        return format_args(args)
+        return vars(args)
 
     async def build(self, *, additional_hooks=None, skip_hook_creation=False,
                     environment_callback=None, additional_targets=None):
@@ -176,9 +172,15 @@ class MesonBuildTask(TaskExtensionPoint):
         cmd += [self.meson_path]
         cmd += ["compile"]
 
-        completed = await run(self.context, cmd, cwd=args.build_base, env=env)
+        # append content from the 'MAKEFLAGS' environment variable
+        makeflags = env.get("MAKEFLAGS")
+        if makeflags:
+            cmd.extend(makeflags.split())
+
+        completed = await run(self.context, cmd, cwd=args.build_base, env=env, capture_output="stdout")
         if completed.returncode:
-            return completed.returncode
+            logger.error("\n"+completed.stdout.decode('utf-8'))
+        return completed.returncode
 
     async def _install(self, args, env):
         self.progress('install')
@@ -218,9 +220,10 @@ class MesonBuildTask(TaskExtensionPoint):
         cmd += [self.meson_path]
         cmd += ["install"]
 
-        completed = await run(self.context, cmd, cwd=args.build_base, env=env)
+        completed = await run(self.context, cmd, cwd=args.build_base, env=env, capture_output="stdout")
         if completed.returncode:
-            return completed.returncode
+            logger.error("\n"+completed.stdout.decode('utf-8'))
+        return completed.returncode
 
 
 class RosMesonBuildTask(TaskExtensionPoint):
