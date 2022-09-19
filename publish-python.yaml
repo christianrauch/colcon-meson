@@ -8,7 +8,4 @@ artifacts:
         config:
           repository: dirk-thomas/colcon
           distributions:
-            - ubuntu:focal
             - ubuntu:jammy
-            - debian:buster
-            - debian:bullseye
