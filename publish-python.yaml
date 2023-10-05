@@ -9,3 +9,4 @@ artifacts:
           repository: dirk-thomas/colcon
           distributions:
             - ubuntu:jammy
+            - ubuntu:bookworm
