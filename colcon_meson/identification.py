@@ -42,10 +42,22 @@ class CustomInterpreter(InterpreterBase):
         return None
 
     def function_call(self, node: mparser.FunctionNode) -> typing.Optional[InterpreterObject]:
-        func_name = node.func_name
+        node_func_name = f"{type(node.func_name).__module__}.{type(node.func_name).__qualname__}"
+        if node_func_name == "str":
+            # meson <= 1.2
+            func_name = node.func_name
+        elif node_func_name == "mesonbuild.mparser.IdNode":
+            # meson >= 1.3
+            func_name = node.func_name.value
+        else:
+            raise AttributeError("Cannot determine meson project name.")
+
+        assert type(func_name) == str
+
         reduced_pos = [self.evaluate_statement(arg) for arg in node.args.arguments]
         reduced_pos = list(filter(None, reduced_pos))
         args = self._unholder_args(reduced_pos, {})[0]
+
         if func_name == "project":
             self.data["name"] = args[0]
         elif func_name == "dependency":
