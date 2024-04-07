@@ -237,9 +237,6 @@ class MesonBuildTask(TaskExtensionPoint):
 
 
 class RosMesonBuildTask(TaskExtensionPoint):
-    def __init__(self):
-        super().__init__()
-
     async def build(self):
         meson_extension = MesonBuildTask()
         meson_extension.set_context(context=self.context)
