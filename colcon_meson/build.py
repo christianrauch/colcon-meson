@@ -198,7 +198,7 @@ class MesonBuildTask(TaskExtensionPoint):
         # get current install targets
         assert(mesontargetfile.exists())
         with open(mesontargetfile, 'r') as f:
-            install_targets = {target["name"]:target["install_filename"] for target in json.load(f) if target["installed"]}
+            install_targets = {target["name"]: target["install_filename"] for target in json.load(f) if target["installed"]}
 
         if not install_targets:
             logger.error("no install targets")
