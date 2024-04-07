@@ -7,6 +7,7 @@ builddir
 buildfile
 buildoptions
 buildtype
+builtins
 cmdline
 codeblock
 colcon

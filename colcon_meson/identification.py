@@ -59,7 +59,7 @@ class CustomInterpreter(InterpreterBase):
 
     def _function_call(self, node: mparser.FunctionNode) -> typing.Optional[InterpreterObject]:
         node_func_name = f"{type(node.func_name).__module__}.{type(node.func_name).__qualname__}"
-        if node_func_name == "str":
+        if node_func_name == "builtins.str":
             # meson <= 1.2
             func_name = node.func_name
         elif node_func_name == "mesonbuild.mparser.IdNode":
