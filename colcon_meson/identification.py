@@ -7,7 +7,7 @@ import typing
 from mesonbuild import environment
 from mesonbuild import mesonlib
 from mesonbuild.interpreterbase.interpreterbase import InterpreterBase
-from mesonbuild.interpreterbase.baseobjects import *
+from mesonbuild.interpreterbase.baseobjects import mparser, InterpreterObject
 from mesonbuild.interpreter import primitives
 
 from colcon_core.logging import colcon_logger
