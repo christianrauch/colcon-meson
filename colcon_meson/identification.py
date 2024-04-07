@@ -19,6 +19,7 @@ logger = colcon_logger.getChild(__name__)
 
 
 class CustomInterpreter(InterpreterBase):
+
     def __init__(self, source_root: str, subdir: str, subproject: str):
         super().__init__(source_root, subdir, subproject)
 
@@ -95,6 +96,7 @@ class CustomInterpreter(InterpreterBase):
 
 
 class MesonPackageIdentification(PackageIdentificationExtensionPoint):
+
     def identify(self, desc: PackageDescriptor):
         parser = CustomInterpreter(desc.path, "", "")
         data = parser.parse()

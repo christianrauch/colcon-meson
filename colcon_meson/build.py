@@ -45,6 +45,7 @@ def format_args(args):
 
 
 class MesonBuildTask(TaskExtensionPoint):
+
     def __init__(self):
         super().__init__()
 
@@ -237,6 +238,7 @@ class MesonBuildTask(TaskExtensionPoint):
 
 
 class RosMesonBuildTask(TaskExtensionPoint):
+
     async def build(self):
         meson_extension = MesonBuildTask()
         meson_extension.set_context(context=self.context)
