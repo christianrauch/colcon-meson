@@ -94,9 +94,6 @@ class CustomInterpreter(InterpreterBase):
 
 
 class MesonPackageIdentification(PackageIdentificationExtensionPoint):
-    def __init__(self):
-        super().__init__()
-
     def identify(self, metadata):
         parser = CustomInterpreter(metadata.path, "", "")
         data = parser.parse()
