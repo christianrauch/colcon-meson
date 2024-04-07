@@ -149,7 +149,7 @@ class MesonBuildTask(TaskExtensionPoint):
                     newcfg[arg] = defcfg[arg]
 
             # parse old configuration from meson cache
-            assert(configfile.exists())
+            assert configfile.exists()
             with open(configfile, 'r') as f:
                 mesoncfg = {arg["name"]: arg["value"] for arg in json.load(f)}
 
@@ -198,7 +198,7 @@ class MesonBuildTask(TaskExtensionPoint):
         lastinstalltargetfile = Path(args.build_base) / "last_install_targets.json"
 
         # get current install targets
-        assert(mesontargetfile.exists())
+        assert mesontargetfile.exists()
         with open(mesontargetfile, 'r') as f:
             install_targets = {target["name"]: target["install_filename"] for target in json.load(f) if target["installed"]}
 

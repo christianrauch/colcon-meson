@@ -55,7 +55,7 @@ class CustomInterpreter(InterpreterBase):
         else:
             raise AttributeError("Cannot determine meson project name.")
 
-        assert type(func_name) == str
+        assert type(func_name) is str
 
         reduced_pos = [self.evaluate_statement(arg) for arg in node.args.arguments]
         reduced_pos = list(filter(None, reduced_pos))
