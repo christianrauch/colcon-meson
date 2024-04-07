@@ -21,7 +21,11 @@ def test_flake8():
     logging.getLogger('pydocstyle').setLevel(logging.WARNING)
 
     style_guide = get_style_guide(
-        extend_ignore=['D100', 'D104'],
+        extend_ignore=[
+            'D100',
+            'D104',
+            'E501',  # line too long
+        ],
         show_source=True,
     )
     style_guide_tests = get_style_guide(
