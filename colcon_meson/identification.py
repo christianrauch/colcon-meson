@@ -4,14 +4,15 @@
 import os
 import typing
 
-from mesonbuild import environment
-from mesonbuild import mesonlib
-from mesonbuild.interpreterbase.interpreterbase import InterpreterBase
-from mesonbuild.interpreterbase.baseobjects import mparser, InterpreterObject
-from mesonbuild.interpreter import primitives
-
+# colcon
 from colcon_core.logging import colcon_logger
 from colcon_core.package_identification import PackageIdentificationExtensionPoint
+# meson
+from mesonbuild import environment
+from mesonbuild import mesonlib
+from mesonbuild.interpreter import primitives
+from mesonbuild.interpreterbase.baseobjects import InterpreterObject, mparser
+from mesonbuild.interpreterbase.interpreterbase import InterpreterBase
 
 logger = colcon_logger.getChild(__name__)
 

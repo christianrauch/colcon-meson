@@ -1,19 +1,20 @@
 # Copyright 2024 Christian Rauch
 # Licensed under the Apache License, Version 2.0
 
+import json
 import os
 from pathlib import Path
 import shutil
-import json
 
-from mesonbuild import coredata
-from mesonbuild.mesonmain import CommandLineParser
-
+# colcon
 from colcon_core.environment import create_environment_scripts
 from colcon_core.logging import colcon_logger
 from colcon_core.shell import get_command_environment
 from colcon_core.task import run
 from colcon_core.task import TaskExtensionPoint
+# meson
+from mesonbuild import coredata
+from mesonbuild.mesonmain import CommandLineParser
 
 logger = colcon_logger.getChild(__name__)
 
