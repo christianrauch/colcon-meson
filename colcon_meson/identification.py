@@ -33,7 +33,7 @@ class CustomInterpreter(InterpreterBase):
 
         self.environment = environment
 
-        self.data = dict()
+        self.data = {}
         self.data["dependencies"] = set()
 
     def evaluate_statement(self, cur: mparser.BaseNode) -> typing.Optional[InterpreterObject]:
@@ -89,7 +89,7 @@ class CustomInterpreter(InterpreterBase):
         try:
             self.load_root_meson_file()
         except mesonlib.MesonException:
-            return dict()
+            return {}
 
         self.evaluate_codeblock(self.ast)
         return self.data

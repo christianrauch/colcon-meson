@@ -55,12 +55,12 @@ class MesonBuildTask(TaskExtensionPoint):
     def add_arguments(self, *, parser):
         parser.add_argument('--meson-args',
                             nargs='*', metavar='*',
-                            type=str.lstrip, default=list(),
+                            type=str.lstrip, default=[],
                             help="Pass 'setup' arguments to Meson projects.",
                             )
 
     def get_default_args(self, args):
-        margs = list()
+        margs = []
 
         # meson installs by default to architecture specific subdirectories,
         # e.g. "lib/x86_64-linux-gnu", but the LibraryPathEnvironment hook
@@ -161,7 +161,7 @@ class MesonBuildTask(TaskExtensionPoint):
         if not run_init_setup and not config_changed:
             return
 
-        cmd = list()
+        cmd = []
         cmd += [self.meson_path]
         cmd += ["setup"]
         cmd.extend(marg_def)
@@ -179,7 +179,7 @@ class MesonBuildTask(TaskExtensionPoint):
     async def _build(self, args, env, *, additional_targets=None):
         self.progress('build')
 
-        cmd = list()
+        cmd = []
         cmd += [self.meson_path]
         cmd += ["compile"]
 
@@ -227,7 +227,7 @@ class MesonBuildTask(TaskExtensionPoint):
         with open(lastinstalltargetfile, 'w') as f:
             json.dump(install_targets, f)
 
-        cmd = list()
+        cmd = []
         cmd += [self.meson_path]
         cmd += ["install"]
 
