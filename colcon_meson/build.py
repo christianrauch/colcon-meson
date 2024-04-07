@@ -52,8 +52,10 @@ class MesonBuildTask(TaskExtensionPoint):
 
     def add_arguments(self, *, parser):
         parser.add_argument('--meson-args',
-            nargs='*', metavar='*', type=str.lstrip, default=list(),
-            help="Pass 'setup' arguments to Meson projects.")
+                            nargs='*', metavar='*',
+                            type=str.lstrip, default=list(),
+                            help="Pass 'setup' arguments to Meson projects.",
+                            )
 
     def get_default_args(self, args):
         margs = list()
