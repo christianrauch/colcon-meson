@@ -6,6 +6,7 @@ import typing
 
 # colcon
 from colcon_core.logging import colcon_logger
+from colcon_core.package_descriptor import PackageDescriptor
 from colcon_core.package_identification import PackageIdentificationExtensionPoint
 # meson
 from mesonbuild import environment
@@ -94,19 +95,19 @@ class CustomInterpreter(InterpreterBase):
 
 
 class MesonPackageIdentification(PackageIdentificationExtensionPoint):
-    def identify(self, metadata):
-        parser = CustomInterpreter(metadata.path, "", "")
+    def identify(self, desc: PackageDescriptor):
+        parser = CustomInterpreter(desc.path, "", "")
         data = parser.parse()
 
         if not data:
             return
 
-        metadata.type = 'meson'
+        desc.type = 'meson'
 
-        if metadata.name is None:
-            metadata.name = data["name"]
+        if desc.name is None:
+            desc.name = data["name"]
 
-        logger.info("'%s' dependencies: %s", metadata.name, data['dependencies'])
+        logger.info("'%s' dependencies: %s", desc.name, data['dependencies'])
 
-        metadata.dependencies['build'].update(data['dependencies'])
-        metadata.dependencies['run'].update(data['dependencies'])
+        desc.dependencies['build'].update(data['dependencies'])
+        desc.dependencies['run'].update(data['dependencies'])
