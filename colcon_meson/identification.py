@@ -1,20 +1,28 @@
+# Copyright 2024 Christian Rauch
+# Licensed under the Apache License, Version 2.0
+
 import os
 import typing
 
+# colcon
+from colcon_core.logging import colcon_logger
+from colcon_core.package_descriptor import PackageDescriptor
+from colcon_core.package_identification import PackageIdentificationExtensionPoint
+# meson
 from mesonbuild import environment
 from mesonbuild import mesonlib
-from mesonbuild.interpreterbase.interpreterbase import InterpreterBase
-from mesonbuild.interpreterbase.baseobjects import *
 from mesonbuild.interpreter import primitives
-
-from colcon_core.logging import colcon_logger
-from colcon_core.package_identification import PackageIdentificationExtensionPoint
+from mesonbuild.interpreterbase.baseobjects import InterpreterObject, mparser
+from mesonbuild.interpreterbase.interpreterbase import InterpreterBase
 
 logger = colcon_logger.getChild(__name__)
 
 
 class CustomInterpreter(InterpreterBase):
+    """A custom interpreter to parse metadata for Meson projects."""
+
     def __init__(self, source_root: str, subdir: str, subproject: str):
+        """Initialise the interpreter and a data structure for metadata."""
         super().__init__(source_root, subdir, subproject)
 
         self.holder_map.update({
@@ -27,21 +35,29 @@ class CustomInterpreter(InterpreterBase):
 
         self.environment = environment
 
-        self.data = dict()
+        self.data = {}
         self.data["dependencies"] = set()
 
     def evaluate_statement(self, cur: mparser.BaseNode) -> typing.Optional[InterpreterObject]:
+        """Evaluate the statements in the Meson project file.
+
+        Args:
+            cur (mparser.BaseNode): a node in the project file
+
+        Returns:
+            typing.Optional[InterpreterObject]:
+        """
         if isinstance(cur, mparser.FunctionNode):
-            return self.function_call(cur)
+            return self._function_call(cur)
         elif isinstance(cur, mparser.AssignmentNode):
-            self.assignment(cur)
+            self._assignment(cur)
         elif isinstance(cur, mparser.StringNode):
             return self._holderify(cur.value)
         elif isinstance(cur, mparser.ArrayNode):
-            return self.evaluate_arraystatement(cur)
+            return self._evaluate_arraystatement(cur)
         return None
 
-    def function_call(self, node: mparser.FunctionNode) -> typing.Optional[InterpreterObject]:
+    def _function_call(self, node: mparser.FunctionNode) -> typing.Optional[InterpreterObject]:
         node_func_name = f"{type(node.func_name).__module__}.{type(node.func_name).__qualname__}"
         if node_func_name == "str":
             # meson <= 1.2
@@ -52,7 +68,7 @@ class CustomInterpreter(InterpreterBase):
         else:
             raise AttributeError("Cannot determine meson project name.")
 
-        assert type(func_name) == str
+        assert type(func_name) is str
 
         reduced_pos = [self.evaluate_statement(arg) for arg in node.args.arguments]
         reduced_pos = list(filter(None, reduced_pos))
@@ -70,42 +86,51 @@ class CustomInterpreter(InterpreterBase):
                 self.data[k].update(subdata[k])
         return None
 
-    def assignment(self, node: mparser.AssignmentNode) -> None:
+    def _assignment(self, node: mparser.AssignmentNode) -> None:
         self.evaluate_statement(node.value)
         return None
 
-    def evaluate_arraystatement(self, cur: mparser.ArrayNode) -> InterpreterObject:
+    def _evaluate_arraystatement(self, cur: mparser.ArrayNode) -> InterpreterObject:
         arguments = [self.evaluate_statement(arg) for arg in cur.args.arguments]
         arguments = list(filter(None, arguments))
         return self._holderify(self._unholder_args(arguments, {})[0])
 
     def parse(self) -> dict:
+        """Run the interpreter on a Meson project file.
+
+        Returns:
+            dict: extracted metadata
+        """
         try:
             self.load_root_meson_file()
         except mesonlib.MesonException:
-            return dict()
+            return {}
 
         self.evaluate_codeblock(self.ast)
         return self.data
 
 
 class MesonPackageIdentification(PackageIdentificationExtensionPoint):
-    def __init__(self):
-        super().__init__()
+    """Meson package identification."""
 
-    def identify(self, metadata):
-        parser = CustomInterpreter(metadata.path, "", "")
+    def identify(self, desc: PackageDescriptor):
+        """Identify a Meson project for colcon.
+
+        Args:
+            desc (PackageDescriptor): package description that will be updated
+        """
+        parser = CustomInterpreter(desc.path, "", "")
         data = parser.parse()
 
         if not data:
             return
 
-        metadata.type = 'meson'
+        desc.type = 'meson'
 
-        if metadata.name is None:
-            metadata.name = data["name"]
+        if desc.name is None:
+            desc.name = data["name"]
 
-        logger.info("'%s' dependencies: %s", metadata.name, data['dependencies'])
+        logger.info("'%s' dependencies: %s", desc.name, data['dependencies'])
 
-        metadata.dependencies['build'].update(data['dependencies'])
-        metadata.dependencies['run'].update(data['dependencies'])
+        desc.dependencies['build'].update(data['dependencies'])
+        desc.dependencies['run'].update(data['dependencies'])
