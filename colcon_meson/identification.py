@@ -19,8 +19,10 @@ logger = colcon_logger.getChild(__name__)
 
 
 class CustomInterpreter(InterpreterBase):
+    """A custom interpreter to parse metadata for Meson projects."""
 
     def __init__(self, source_root: str, subdir: str, subproject: str):
+        """Initialise the interpreter and a data structure for metadata."""
         super().__init__(source_root, subdir, subproject)
 
         self.holder_map.update({
@@ -37,17 +39,25 @@ class CustomInterpreter(InterpreterBase):
         self.data["dependencies"] = set()
 
     def evaluate_statement(self, cur: mparser.BaseNode) -> typing.Optional[InterpreterObject]:
+        """Evaluate the statements in the Meson project file.
+
+        Args:
+            cur (mparser.BaseNode): a node in the project file
+
+        Returns:
+            typing.Optional[InterpreterObject]:
+        """
         if isinstance(cur, mparser.FunctionNode):
-            return self.function_call(cur)
+            return self._function_call(cur)
         elif isinstance(cur, mparser.AssignmentNode):
-            self.assignment(cur)
+            self._assignment(cur)
         elif isinstance(cur, mparser.StringNode):
             return self._holderify(cur.value)
         elif isinstance(cur, mparser.ArrayNode):
-            return self.evaluate_arraystatement(cur)
+            return self._evaluate_arraystatement(cur)
         return None
 
-    def function_call(self, node: mparser.FunctionNode) -> typing.Optional[InterpreterObject]:
+    def _function_call(self, node: mparser.FunctionNode) -> typing.Optional[InterpreterObject]:
         node_func_name = f"{type(node.func_name).__module__}.{type(node.func_name).__qualname__}"
         if node_func_name == "str":
             # meson <= 1.2
@@ -76,16 +86,21 @@ class CustomInterpreter(InterpreterBase):
                 self.data[k].update(subdata[k])
         return None
 
-    def assignment(self, node: mparser.AssignmentNode) -> None:
+    def _assignment(self, node: mparser.AssignmentNode) -> None:
         self.evaluate_statement(node.value)
         return None
 
-    def evaluate_arraystatement(self, cur: mparser.ArrayNode) -> InterpreterObject:
+    def _evaluate_arraystatement(self, cur: mparser.ArrayNode) -> InterpreterObject:
         arguments = [self.evaluate_statement(arg) for arg in cur.args.arguments]
         arguments = list(filter(None, arguments))
         return self._holderify(self._unholder_args(arguments, {})[0])
 
     def parse(self) -> dict:
+        """Run the interpreter on a Meson project file.
+
+        Returns:
+            dict: extracted metadata
+        """
         try:
             self.load_root_meson_file()
         except mesonlib.MesonException:
@@ -96,8 +111,14 @@ class CustomInterpreter(InterpreterBase):
 
 
 class MesonPackageIdentification(PackageIdentificationExtensionPoint):
+    """Meson package identification."""
 
     def identify(self, desc: PackageDescriptor):
+        """Identify a Meson project for colcon.
+
+        Args:
+            desc (PackageDescriptor): package description that will be updated
+        """
         parser = CustomInterpreter(desc.path, "", "")
         data = parser.parse()
 
