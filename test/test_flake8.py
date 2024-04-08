@@ -25,6 +25,7 @@ def test_flake8():
             'D100',
             'D104',
             'E501',  # line too long
+            'Q000',  # Double quotes found but single quotes preferred
         ],
         show_source=True,
     )
