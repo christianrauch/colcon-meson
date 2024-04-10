@@ -9,3 +9,26 @@ on:
 jobs:
   pytest:
     uses: colcon/ci/.github/workflows/pytest.yaml@main
+
+  meson:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: [0.61, 1.3, 'latest']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          cache: 'pip'
+
+      - run: pip install -e .[test]
+
+      - run: pip install meson==${{ matrix.version }}
+        if: ${{ matrix.version != 'latest' }}
+
+      - run: pip install --upgrade meson
+        if: ${{ matrix.version == 'latest' }}
+
+      - run: pytest
