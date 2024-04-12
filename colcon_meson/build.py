@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+from typing import List
 
 # colcon
 from colcon_core.environment import create_environment_scripts
@@ -94,7 +95,7 @@ class MesonBuildTask(TaskExtensionPoint):
                             help="Pass 'setup' arguments to Meson projects.",
                             )
 
-    def get_default_args(self, args: Namespace) -> list[str]:
+    def get_default_args(self, args: Namespace) -> List[str]:
         """Get default Meson arguments.
 
         Args:
@@ -121,7 +122,7 @@ class MesonBuildTask(TaskExtensionPoint):
 
         return margs
 
-    def meson_parse_cmdline(self, cmdline: list[str]) -> Namespace:
+    def meson_parse_cmdline(self, cmdline: List[str]) -> Namespace:
         """Parse command line arguments with the Meson arg parser.
 
         Args:
@@ -134,7 +135,7 @@ class MesonBuildTask(TaskExtensionPoint):
         coredata.parse_cmd_line_options(args)
         return args
 
-    def meson_format_cmdline(self, cmdline: list[str]):
+    def meson_format_cmdline(self, cmdline: List[str]):
         """Convert Meson args from command line.
 
         Args:
